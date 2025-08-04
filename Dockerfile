@@ -1,5 +1,5 @@
 # Use Maven image with JDK 17 to build and run the tests
-FROM maven:3.9.5-eclipse-temurin-17 as builder
+FROM maven:3.9.5-eclipse-temurin-17 AS builder
 
 # Set work directory
 WORKDIR /app

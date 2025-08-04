@@ -46,7 +46,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          push: false
+          load: true  # This loads the image into the local Docker daemon
           tags: online-bookstore-api-tests:latest
       - name: Run tests in container
         run: docker run --rm -e BASE_URL=$BASE_URL online-bookstore-api-tests:latest
@@ -54,7 +54,7 @@ jobs:
         if: always()
         run: |
             id=$(docker create -e BASE_URL=$BASE_URL online-bookstore-api-tests:latest)
-            docker cp $id:/workspace/target/surefire-reports ./docker-reports
+            docker cp $id:/app/target/surefire-reports ./docker-reports
             docker rm $id
       - name: Upload docker test results
         if: always()
