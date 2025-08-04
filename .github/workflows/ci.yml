@@ -38,6 +38,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       BASE_URL: https://fakerestapi.azurewebsites.net
+    steps:
       - uses: actions/checkout@v3
       - name: Set up Buildx
         uses: docker/setup-buildx-action@v2
@@ -52,9 +53,9 @@ jobs:
       - name: Copy test reports from container
         if: always()
         run: |
-          id=$(docker create -e BASE_URL=$BASE_URL online-bookstore-api-tests:latest)
-          docker cp $id:/workspace/target/surefire-reports ./docker-reports
-          docker rm $id
+            id=$(docker create -e BASE_URL=$BASE_URL online-bookstore-api-tests:latest)
+            docker cp $id:/workspace/target/surefire-reports ./docker-reports
+            docker rm $id
       - name: Upload docker test results
         if: always()
         uses: actions/upload-artifact@v4
