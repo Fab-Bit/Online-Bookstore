@@ -2,24 +2,22 @@ name: Java CI with Maven
 
 on:
   push:
-    branches: [ main ]
+    branches: [ "main" ]
   pull_request:
-    branches: [ main ]
+    branches: [ "main" ]
 
 jobs:
-  build:
+  build-test:
     runs-on: ubuntu-latest
     env:
       BASE_URL: http://localhost:3000
     steps:
       - uses: actions/checkout@v3
-
       - name: Set up JDK 17
         uses: actions/setup-java@v3
         with:
           distribution: 'temurin'
           java-version: '17'
-
       - name: Cache Maven packages
         uses: actions/cache@v3
         with:
@@ -27,13 +25,11 @@ jobs:
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
             ${{ runner.os }}-maven-
-
       - name: Build and test with Maven
         run: mvn -B test --file pom.xml
-
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: surefire-reports
           path: target/surefire-reports
@@ -44,30 +40,25 @@ jobs:
       BASE_URL: http://localhost:3000
     steps:
       - uses: actions/checkout@v3
-
       - name: Set up Buildx
         uses: docker/setup-buildx-action@v2
-
       - name: Build Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
           push: false
           tags: online-bookstore-api-tests:latest
-
       - name: Run tests in container
         run: docker run --rm -e BASE_URL=$BASE_URL online-bookstore-api-tests:latest
-
       - name: Copy test reports from container
         if: always()
         run: |
           id=$(docker create -e BASE_URL=$BASE_URL online-bookstore-api-tests:latest)
           docker cp $id:/workspace/target/surefire-reports ./docker-reports
           docker rm $id
-
       - name: Upload docker test results
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: docker-surefire-reports
           path: docker-reports
