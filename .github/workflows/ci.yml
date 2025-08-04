@@ -50,12 +50,21 @@ jobs:
           tags: online-bookstore-api-tests:latest
       - name: Run tests in container
         run: docker run --rm -e BASE_URL=$BASE_URL online-bookstore-api-tests:latest
-      - name: Copy test reports from container
+      - name: Run tests in container and copy reports
         if: always()
         run: |
-            id=$(docker create -e BASE_URL=$BASE_URL online-bookstore-api-tests:latest)
-            docker cp $id:/app/target/surefire-reports ./docker-reports
-            docker rm $id
+          # Run container without --rm so we can copy files afterwards
+          container_id=$(docker run -d -e BASE_URL=$BASE_URL online-bookstore-api-tests:latest)
+          
+          # Wait for container to finish
+          docker wait $container_id || true
+          
+          # Copy the reports (create directory first)
+          mkdir -p docker-reports
+          docker cp $container_id:/app/target/surefire-reports/. ./docker-reports/ 2>/dev/null || echo "No reports to copy"
+          
+          # Clean up the container
+          docker rm $container_id || true
       - name: Upload docker test results
         if: always()
         uses: actions/upload-artifact@v4
