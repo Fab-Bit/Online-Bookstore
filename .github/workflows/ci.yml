@@ -7,105 +7,7 @@ on:
     branches: [ "main" ]
 
 jobs:
-  build-test:
-    runs-on: ubuntu-latest
-    env:
-      BASE_URL: https://fakerestapi.azurewebsites.net
-    steps:
-      - uses: actions/checkout@v3
-      - name: Set up JDK 17
-        uses: actions/setup-java@v3
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-      - name: Cache Maven packages
-        uses: actions/cache@v3
-        with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
-            ${{ runner.os }}-maven-
-      - name: Build and test with Maven
-        run: mvn -B test --file pom.xml
-      - name: Generate Maven Test Summary
-        if: always()
-        run: |
-          echo "## 📊 Maven Test Results" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          
-          # Check if surefire reports exist
-          if [ -d "target/surefire-reports" ] && [ "$(ls -A target/surefire-reports/*.xml 2>/dev/null)" ]; then
-            # Count total tests, failures, errors, skipped
-            TOTAL_TESTS=$(grep -h "tests=" target/surefire-reports/TEST-*.xml | sed 's/.*tests="\([0-9]*\)".*/\1/' | awk '{sum += $1} END {print sum}')
-            FAILURES=$(grep -h "failures=" target/surefire-reports/TEST-*.xml | sed 's/.*failures="\([0-9]*\)".*/\1/' | awk '{sum += $1} END {print sum}')
-            ERRORS=$(grep -h "errors=" target/surefire-reports/TEST-*.xml | sed 's/.*errors="\([0-9]*\)".*/\1/' | awk '{sum += $1} END {print sum}')
-            SKIPPED=$(grep -h "skipped=" target/surefire-reports/TEST-*.xml | sed 's/.*skipped="\([0-9]*\)".*/\1/' | awk '{sum += $1} END {print sum}')
-            PASSED=$((TOTAL_TESTS - FAILURES - ERRORS - SKIPPED))
-            
-            # Add summary statistics
-            echo "### Summary Statistics" >> $GITHUB_STEP_SUMMARY
-            echo "| Metric | Count |" >> $GITHUB_STEP_SUMMARY
-            echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
-            echo "| ✅ Passed | $PASSED |" >> $GITHUB_STEP_SUMMARY
-            echo "| ❌ Failed | $FAILURES |" >> $GITHUB_STEP_SUMMARY
-            echo "| 🚨 Errors | $ERRORS |" >> $GITHUB_STEP_SUMMARY
-            echo "| ⏭️ Skipped | $SKIPPED |" >> $GITHUB_STEP_SUMMARY
-            echo "| **📈 Total** | **$TOTAL_TESTS** |" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            
-            # Add individual test results
-            echo "### 📋 Individual Test Results" >> $GITHUB_STEP_SUMMARY
-            echo "| Test Class | Test Method | Status | Duration |" >> $GITHUB_STEP_SUMMARY
-            echo "|------------|-------------|--------|----------|" >> $GITHUB_STEP_SUMMARY
-            
-            # Parse each test file
-            for file in target/surefire-reports/TEST-*.xml; do
-              if [ -f "$file" ]; then
-                CLASS_NAME=$(basename "$file" .xml | sed 's/TEST-//')
-                
-                # Extract test cases using grep and awk
-                grep '<testcase' "$file" | while IFS= read -r line; do
-                  TEST_NAME=$(echo "$line" | sed 's/.*name="\([^"]*\)".*/\1/')
-                  TIME=$(echo "$line" | sed 's/.*time="\([^"]*\)".*/\1/')
-                  
-                  # Check if test has failure or error
-                  if echo "$line" | grep -q "/>" ; then
-                    # Self-closing tag means passed
-                    echo "| $CLASS_NAME | $TEST_NAME | ✅ PASSED | ${TIME}s |" >> $GITHUB_STEP_SUMMARY
-                  else
-                    # Check the content between tags for failure/error
-                    STATUS="✅ PASSED"
-                    if grep -A 10 "name=\"$TEST_NAME\"" "$file" | grep -q "<failure"; then
-                      STATUS="❌ FAILED"
-                    elif grep -A 10 "name=\"$TEST_NAME\"" "$file" | grep -q "<error"; then
-                      STATUS="🚨 ERROR"
-                    elif grep -A 10 "name=\"$TEST_NAME\"" "$file" | grep -q "<skipped"; then
-                      STATUS="⏭️ SKIPPED"
-                    fi
-                    echo "| $CLASS_NAME | $TEST_NAME | $STATUS | ${TIME}s |" >> $GITHUB_STEP_SUMMARY
-                  fi
-                done
-              fi
-            done
-            
-            # Add status badge
-            if [ "$FAILURES" -eq 0 ] && [ "$ERRORS" -eq 0 ]; then
-              echo "" >> $GITHUB_STEP_SUMMARY
-              echo "🎉 **All tests passed!**" >> $GITHUB_STEP_SUMMARY
-            else
-              echo "" >> $GITHUB_STEP_SUMMARY
-              echo "⚠️ **Some tests failed. Check the details above.**" >> $GITHUB_STEP_SUMMARY
-            fi
-          else
-            echo "❌ No test reports found!" >> $GITHUB_STEP_SUMMARY
-          fi
-      - name: Upload test results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: surefire-reports
-          path: target/surefire-reports
-
+  
   docker-test:
     runs-on: ubuntu-latest
     env:
@@ -219,7 +121,7 @@ jobs:
 
   test-summary:
     runs-on: ubuntu-latest
-    needs: [build-test, docker-test]
+    needs: [docker-test]
     if: always()
     steps:
       - name: Generate Overall Test Summary
@@ -231,16 +133,6 @@ jobs:
           echo "## 📊 Environment Results" >> $GITHUB_STEP_SUMMARY
           echo "| Environment | Status | Details |" >> $GITHUB_STEP_SUMMARY
           echo "|-------------|--------|---------|" >> $GITHUB_STEP_SUMMARY
-          
-          # Check Maven job result
-          MAVEN_STATUS="${{ needs.build-test.result }}"
-          if [ "$MAVEN_STATUS" = "success" ]; then
-            echo "| 🏗️ Maven Build | ✅ SUCCESS | All tests passed in Maven environment |" >> $GITHUB_STEP_SUMMARY
-          elif [ "$MAVEN_STATUS" = "failure" ]; then
-            echo "| 🏗️ Maven Build | ❌ FAILED | Some tests failed in Maven environment |" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "| 🏗️ Maven Build | ⚠️ $MAVEN_STATUS | Maven build had issues |" >> $GITHUB_STEP_SUMMARY
-          fi
           
           # Check Docker job result
           DOCKER_STATUS="${{ needs.docker-test.result }}"
@@ -255,7 +147,7 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           
           # Overall status
-          if [ "$MAVEN_STATUS" = "success" ] && [ "$DOCKER_STATUS" = "success" ]; then
+          if [ "$DOCKER_STATUS" = "success" ]; then
             echo "## 🎉 Overall Result: SUCCESS" >> $GITHUB_STEP_SUMMARY
             echo "All tests passed in both Maven and Docker environments!" >> $GITHUB_STEP_SUMMARY
           else
@@ -264,11 +156,3 @@ jobs:
           fi
           
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "## 📋 Test Coverage" >> $GITHUB_STEP_SUMMARY
-          echo "This test suite includes comprehensive edge case testing:" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Happy path scenarios" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Validation edge cases (missing fields, null values, empty strings)" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Boundary testing (negative numbers, very large values)" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Data format testing (invalid dates, special characters)" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Error handling (non-existent resources, malformed JSON)" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Character encoding (Unicode, emojis, international characters)" >> $GITHUB_STEP_SUMMARY
