@@ -76,41 +76,49 @@ jobs:
               if [ -f "$file" ]; then
                 CLASS_NAME=$(basename "$file" .xml | sed 's/TEST-//')
                 
-                # Extract test cases using grep and awk
-                grep '<testcase' "$file" | while IFS= read -r line; do
-                  TEST_NAME=$(echo "$line" | sed 's/.*name="\([^"]*\)".*/\1/')
-                  TIME=$(echo "$line" | sed 's/.*time="\([^"]*\)".*/\1/')
-                  
-                  # Check if test has failure or error
-                  if echo "$line" | grep -q "/>" ; then
-                    # Self-closing tag means passed
-                    echo "| $CLASS_NAME | $TEST_NAME | ✅ PASSED | ${TIME}s |" >> $GITHUB_STEP_SUMMARY
-                  else
-                    # Check the content between tags for failure/error
-                    STATUS="✅ PASSED"
-                    if grep -A 10 "name=\"$TEST_NAME\"" "$file" | grep -q "<failure"; then
-                      STATUS="❌ FAILED"
-                    elif grep -A 10 "name=\"$TEST_NAME\"" "$file" | grep -q "<error"; then
-                      STATUS="🚨 ERROR"
-                    elif grep -A 10 "name=\"$TEST_NAME\"" "$file" | grep -q "<skipped"; then
-                      STATUS="⏭️ SKIPPED"
+                # Extract test cases with proper method names
+                while IFS= read -r line; do
+                  if [[ $line == *'<testcase'* ]]; then
+                    # Extract test method name
+                    TEST_METHOD=$(echo "$line" | sed 's/.*name="\([^"]*\)".*/\1/')
+                    
+                    # Extract duration
+                    DURATION=$(echo "$line" | sed 's/.*time="\([^"]*\)".*/\1/')
+                    
+                    # Determine status based on testcase content
+                    if [[ $line == *'/>' ]]; then
+                      # Self-closing tag means PASSED
+                      STATUS="✅ PASSED"
+                    else
+                      # Check for failure/error in the next few lines
+                      # Read the next line to check for failure/error tags
+                      read -r next_line
+                      if [[ $next_line == *'<failure'* ]]; then
+                        STATUS="❌ FAILED"
+                      elif [[ $next_line == *'<error'* ]]; then
+                        STATUS="🚨 ERROR"
+                      elif [[ $next_line == *'<skipped'* ]]; then
+                        STATUS="⏭️ SKIPPED"
+                      else
+                        STATUS="✅ PASSED"
+                      fi
                     fi
-                    echo "| $CLASS_NAME | $TEST_NAME | $STATUS | ${TIME}s |" >> $GITHUB_STEP_SUMMARY
+                    
+                    echo "| $CLASS_NAME | $TEST_METHOD | $STATUS | ${DURATION}s |" >> $GITHUB_STEP_SUMMARY
                   fi
-                done
+                done < "$file"
               fi
             done
             
+            echo "" >> $GITHUB_STEP_SUMMARY
             # Add status badge
             if [ "$FAILURES" -eq 0 ] && [ "$ERRORS" -eq 0 ]; then
-              echo "" >> $GITHUB_STEP_SUMMARY
               echo "🎉 **All Docker tests passed!**" >> $GITHUB_STEP_SUMMARY
             else
-              echo "" >> $GITHUB_STEP_SUMMARY
-              echo "⚠️ **Some Docker tests failed. Check the details above.**" >> $GITHUB_STEP_SUMMARY
+              echo "⚠️ **Some Docker tests failed or had errors**" >> $GITHUB_STEP_SUMMARY
             fi
           else
-            echo "❌ No Docker test reports found!" >> $GITHUB_STEP_SUMMARY
+            echo "No Docker test reports found." >> $GITHUB_STEP_SUMMARY
           fi
       - name: Upload docker test results
         if: always()
