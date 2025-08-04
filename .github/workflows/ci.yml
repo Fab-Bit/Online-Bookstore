@@ -7,7 +7,6 @@ on:
     branches: [ "main" ]
 
 jobs:
-  
   docker-test:
     runs-on: ubuntu-latest
     env:
@@ -39,87 +38,12 @@ jobs:
           
           # Clean up the container
           docker rm $container_id || true
-      - name: Generate Docker Test Summary
+      - name: Publish Docker Test Summary
+        uses: test-summary/action@v2
         if: always()
-        run: |
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "## 🐳 Docker Test Results" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          
-          # Check if docker reports exist
-          if [ -d "docker-reports" ] && [ "$(ls -A docker-reports/*.xml 2>/dev/null)" ]; then
-            # Count total tests, failures, errors, skipped
-            TOTAL_TESTS=$(grep -h "tests=" docker-reports/TEST-*.xml | sed 's/.*tests="\([0-9]*\)".*/\1/' | awk '{sum += $1} END {print sum}')
-            FAILURES=$(grep -h "failures=" docker-reports/TEST-*.xml | sed 's/.*failures="\([0-9]*\)".*/\1/' | awk '{sum += $1} END {print sum}')
-            ERRORS=$(grep -h "errors=" docker-reports/TEST-*.xml | sed 's/.*errors="\([0-9]*\)".*/\1/' | awk '{sum += $1} END {print sum}')
-            SKIPPED=$(grep -h "skipped=" docker-reports/TEST-*.xml | sed 's/.*skipped="\([0-9]*\)".*/\1/' | awk '{sum += $1} END {print sum}')
-            PASSED=$((TOTAL_TESTS - FAILURES - ERRORS - SKIPPED))
-            
-            # Add summary statistics
-            echo "### Summary Statistics" >> $GITHUB_STEP_SUMMARY
-            echo "| Metric | Count |" >> $GITHUB_STEP_SUMMARY
-            echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
-            echo "| ✅ Passed | $PASSED |" >> $GITHUB_STEP_SUMMARY
-            echo "| ❌ Failed | $FAILURES |" >> $GITHUB_STEP_SUMMARY
-            echo "| 🚨 Errors | $ERRORS |" >> $GITHUB_STEP_SUMMARY
-            echo "| ⏭️ Skipped | $SKIPPED |" >> $GITHUB_STEP_SUMMARY
-            echo "| **📈 Total** | **$TOTAL_TESTS** |" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            
-            # Add individual test results
-            echo "### 📋 Individual Test Results" >> $GITHUB_STEP_SUMMARY
-            echo "| Test Class | Test Method | Status | Duration |" >> $GITHUB_STEP_SUMMARY
-            echo "|------------|-------------|--------|----------|" >> $GITHUB_STEP_SUMMARY
-            
-            # Parse each test file
-            for file in docker-reports/TEST-*.xml; do
-              if [ -f "$file" ]; then
-                CLASS_NAME=$(basename "$file" .xml | sed 's/TEST-//')
-                
-                # Extract test cases with proper method names
-                while IFS= read -r line; do
-                  if [[ $line == *'<testcase'* ]]; then
-                    # Extract test method name
-                    TEST_METHOD=$(echo "$line" | sed 's/.*name="\([^"]*\)".*/\1/')
-                    
-                    # Extract duration
-                    DURATION=$(echo "$line" | sed 's/.*time="\([^"]*\)".*/\1/')
-                    
-                    # Determine status based on testcase content
-                    if [[ $line == *'/>' ]]; then
-                      # Self-closing tag means PASSED
-                      STATUS="✅ PASSED"
-                    else
-                      # Check for failure/error in the next few lines
-                      # Read the next line to check for failure/error tags
-                      read -r next_line
-                      if [[ $next_line == *'<failure'* ]]; then
-                        STATUS="❌ FAILED"
-                      elif [[ $next_line == *'<error'* ]]; then
-                        STATUS="🚨 ERROR"
-                      elif [[ $next_line == *'<skipped'* ]]; then
-                        STATUS="⏭️ SKIPPED"
-                      else
-                        STATUS="✅ PASSED"
-                      fi
-                    fi
-                    
-                    echo "| $CLASS_NAME | $TEST_METHOD | $STATUS | ${DURATION}s |" >> $GITHUB_STEP_SUMMARY
-                  fi
-                done < "$file"
-              fi
-            done
-            
-            echo "" >> $GITHUB_STEP_SUMMARY
-            # Add status badge
-            if [ "$FAILURES" -eq 0 ] && [ "$ERRORS" -eq 0 ]; then
-              echo "🎉 **All Docker tests passed!**" >> $GITHUB_STEP_SUMMARY
-            else
-              echo "⚠️ **Some Docker tests failed or had errors**" >> $GITHUB_STEP_SUMMARY
-            fi
-          else
-            echo "No Docker test reports found." >> $GITHUB_STEP_SUMMARY
-          fi
+        with:
+          paths: "docker-reports/TEST-*.xml"
+          show: "all"
       - name: Upload docker test results
         if: always()
         uses: actions/upload-artifact@v4
@@ -134,33 +58,17 @@ jobs:
     steps:
       - name: Generate Overall Test Summary
         run: |
-          echo "# 🧪 Test Execution Summary" >> $GITHUB_STEP_SUMMARY
+          echo "# 🧪 Docker Test Execution Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "This workflow executed API tests in two environments:" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "## 📊 Environment Results" >> $GITHUB_STEP_SUMMARY
-          echo "| Environment | Status | Details |" >> $GITHUB_STEP_SUMMARY
-          echo "|-------------|--------|---------|" >> $GITHUB_STEP_SUMMARY
           
           # Check Docker job result
           DOCKER_STATUS="${{ needs.docker-test.result }}"
           if [ "$DOCKER_STATUS" = "success" ]; then
-            echo "| 🐳 Docker Container | ✅ SUCCESS | All tests passed in Docker environment |" >> $GITHUB_STEP_SUMMARY
-          elif [ "$DOCKER_STATUS" = "failure" ]; then
-            echo "| 🐳 Docker Container | ❌ FAILED | Some tests failed in Docker environment |" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "| 🐳 Docker Container | ⚠️ $DOCKER_STATUS | Docker tests had issues |" >> $GITHUB_STEP_SUMMARY
-          fi
-          
-          echo "" >> $GITHUB_STEP_SUMMARY
-          
-          # Overall status
-          if [ "$DOCKER_STATUS" = "success" ]; then
             echo "## 🎉 Overall Result: SUCCESS" >> $GITHUB_STEP_SUMMARY
-            echo "All tests passed in both Maven and Docker environments!" >> $GITHUB_STEP_SUMMARY
+            echo "✅ All tests passed in the Docker containerized environment!" >> $GITHUB_STEP_SUMMARY
           else
             echo "## ⚠️ Overall Result: ATTENTION NEEDED" >> $GITHUB_STEP_SUMMARY
-            echo "One or more test environments had issues. Please check the detailed results above." >> $GITHUB_STEP_SUMMARY
+            echo "❌ Some tests failed or had issues in the Docker environment." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Status:** $DOCKER_STATUS" >> $GITHUB_STEP_SUMMARY
           fi
-          
-          echo "" >> $GITHUB_STEP_SUMMARY
