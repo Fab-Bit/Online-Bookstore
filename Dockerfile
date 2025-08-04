@@ -1,17 +1,18 @@
-FROM python:3.11-slim
+# Use Maven image with JDK 17 to build and run the tests
+FROM maven:3.9.5-eclipse-temurin-17 as builder
 
-# Install dependencies
+# Set work directory
 WORKDIR /app
-COPY requirements.txt requirements.txt
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
 
-# Copy the test project
-COPY . /app
+# Copy Maven descriptor and source code
+COPY pom.xml .
+COPY src ./src
 
-# Create the reports directory at build time so it exists in the container
-RUN mkdir -p /app/reports
+# Resolve dependencies
+RUN mvn -B dependency:resolve
 
-# Default command executes the pytest suite and writes an HTML report. The
-# base URL can be overridden at runtime via the BASE_URL environment variable.
-CMD ["pytest", "--html=reports/report.html", "--self-contained-html"]
+# Default base URL for the API; can be overridden at runtime
+ENV BASE_URL=http://localhost:3000
+
+# Run the test suite
+CMD ["mvn", "-B", "test"]
