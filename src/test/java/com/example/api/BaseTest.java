@@ -12,7 +12,7 @@ public class BaseTest {
         // Base URL is configurable via system property or environment variable
         String baseUrl = System.getProperty("BASE_URL");
         if (baseUrl == null || baseUrl.isEmpty()) {
-            baseUrl = System.getenv().getOrDefault("BASE_URL", "http://localhost:3000");
+            baseUrl = System.getenv().getOrDefault("BASE_URL", "https://fakerestapi.azurewebsites.net);
         }
         RestAssured.baseURI = baseUrl;
     }
