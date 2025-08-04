@@ -12,7 +12,7 @@ COPY src ./src
 RUN mvn -B dependency:resolve
 
 # Default base URL for the API; can be overridden at runtime
-ENV BASE_URL=http://localhost:3000
+ENV BASE_URL=https://fakerestapi.azurewebsites.net
 
 # Run the test suite
 CMD ["mvn", "-B", "test"]
