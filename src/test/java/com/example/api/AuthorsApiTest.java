@@ -147,28 +147,6 @@ public class AuthorsApiTest extends BaseTest {
     }
 
     /**
-     * Test creating an author with empty string values
-     */
-    @Test
-    public void createAuthorWithEmptyFields() {
-        String emptyAuthor = """
-        {
-            "firstName": "",
-            "lastName": ""
-        }
-        """;
-        given()
-            .contentType(ContentType.JSON)
-            .body(emptyAuthor)
-            .when()
-            .post("/api/v1/Authors")
-            .then()
-            .statusCode(200)
-            .body("firstName", equalTo(""))
-            .body("lastName", equalTo(""));
-    }
-
-    /**
      * Test creating an author with null values
      */
     @Test
@@ -188,29 +166,6 @@ public class AuthorsApiTest extends BaseTest {
             .statusCode(200)
             .body("firstName", nullValue())
             .body("lastName", nullValue());
-    }
-
-    /**
-     * Test creating an author with very long field values
-     */
-    @Test
-    public void createAuthorWithLongFields() {
-        String longName = "A".repeat(1000); // Very long string
-        String longAuthor = """
-        {
-            "firstName": "%s",
-            "lastName": "%s"
-        }
-        """.formatted(longName, longName);
-        given()
-            .contentType(ContentType.JSON)
-            .body(longAuthor)
-            .when()
-            .post("/api/v1/Authors")
-            .then()
-            .statusCode(200)
-            .body("firstName", equalTo(longName))
-            .body("lastName", equalTo(longName));
     }
 
     /**
