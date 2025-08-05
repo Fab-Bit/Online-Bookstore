@@ -30,7 +30,7 @@ Make sure you have Java 17 and Maven installed on your machine.
 3. Run the tests using Maven:
 
 ```sh
-# Use default base URL (http://localhost:3000)
+# Use default base URL (https://fakerestapi.azurewebsites.net)
 mvn test
 
 # OR specify a different base URL
@@ -76,6 +76,3 @@ A GitHub Actions workflow (`.github/workflows/ci.yml`) is included. On each push
 
 The test suite uses the Maven Surefire plugin to generate JUnit XML reports located in the `target/surefire-reports` directory. These reports can be consumed by CI systems to display results. You can also open the reports locally to inspect test outcomes.
 
-## Contributing
-
-Feel free to fork this repository and improve the test coverage or structure. Pull requests are welcome.
