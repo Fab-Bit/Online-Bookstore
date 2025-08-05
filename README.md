@@ -2,37 +2,7 @@
 
 This repository contains an automated testing framework for the Online‑Bookstore RESTful API. The project is written in **Java** using **RestAssured** and **JUnit 5**, with Maven for dependency management and build automation.
 
-The tested API includes endpoints for managing **books** and **authors**. The test suite covers happy paths as well as comprehensive edge cases including:
-
-**Authors API Edge Cases:**
-- Missing required fields (firstName, lastName)
-- Empty string values
-- Null values  
-- Very long field values (1000+ characters)
-- Special characters and Unicode
-- Invalid JSON format
-- Extra/unexpected fields
-- Operations on non-existent resources
-
-**Books API Edge Cases:**
-- Missing required fields (title)
-- Invalid numeric values (negative, zero, extremely large page counts)
-- Invalid date formats and future dates
-- Very long text fields (1000+ characters)
-- Special characters, Unicode, and emojis
-- Malformed JSON
-- Operations on non-existent resources
-
-**Note**: This test suite is designed to work with the [FakeRestAPI.azurewebsites.net](https://fakerestapi.azurewebsites.net) service, which has specific behaviors:
-- Created resources return `id: 0` instead of auto-incrementing IDs
-- The API doesn't perform validation and accepts requests with missing required fields
-- All requests return status 200, even when data is incomplete
-
-## Project Structureutomation Testing Assessment: Online Bookstore
-
-This repository contains an automated testing framework for the Online‑Bookstore RESTful API. The project is written in **Java** using **RestAssured** and **JUnit 5**, with Maven for dependency management and build automation.
-
-The tested API includes endpoints for managing **books** and **authors**. The test suite covers happy paths as well as error/edge cases such as invalid IDs and missing required fields.
+The tested API includes endpoints for managing **books** and **authors**. The test suite covers happy paths as well as comprehensive edge cases.
 
 ## Project Structure
 
@@ -50,16 +20,6 @@ The tested API includes endpoints for managing **books** and **authors**. The te
                         ├── BooksApiTest.java   # Tests for the Books endpoints
                         └── AuthorsApiTest.java # Tests for the Authors endpoints
 ```
-
-### Dependencies
-
-The project uses the following key dependencies:
-
-- [RestAssured](https://rest-assured.io/) for building and sending HTTP requests.
-- [JUnit Jupiter](https://junit.org/junit5/) for structuring tests.
-- [Hamcrest](https://hamcrest.org/) for matchers and assertions.
-
-All dependencies are declared in `pom.xml` and are automatically downloaded by Maven.
 
 ## Running Tests Locally
 
