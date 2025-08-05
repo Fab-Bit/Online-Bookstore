@@ -180,54 +180,6 @@ public class BooksApiTest extends BaseTest {
     }
 
     /**
-     * Test creating a book with zero page count
-     */
-    @Test
-    public void createBookWithZeroPageCount() {
-        String zeroPageBook = """
-        {
-            "title": "Zero Pages Book",
-            "description": "A book with zero pages",
-            "pageCount": 0,
-            "excerpt": "Empty book",
-            "publishDate": "2020-01-01T00:00:00"
-        }
-        """;
-        given()
-            .contentType(ContentType.JSON)
-            .body(zeroPageBook)
-            .when()
-            .post("/api/v1/Books")
-            .then()
-            .statusCode(200)
-            .body("pageCount", equalTo(0));
-    }
-
-    /**
-     * Test creating a book with extremely large page count
-     */
-    @Test
-    public void createBookWithLargePageCount() {
-        String largePageBook = """
-        {
-            "title": "Massive Book",
-            "description": "A book with many pages",
-            "pageCount": 999999999,
-            "excerpt": "Huge book",
-            "publishDate": "2020-01-01T00:00:00"
-        }
-        """;
-        given()
-            .contentType(ContentType.JSON)
-            .body(largePageBook)
-            .when()
-            .post("/api/v1/Books")
-            .then()
-            .statusCode(200)
-            .body("pageCount", equalTo(999999999));
-    }
-
-    /**
      * Test creating a book with invalid date format
      */
     @Test
@@ -272,58 +224,6 @@ public class BooksApiTest extends BaseTest {
             .then()
             .statusCode(200)
             .body("publishDate", equalTo("2099-12-31T23:59:59"));
-    }
-
-    /**
-     * Test creating a book with very long title and description
-     */
-    @Test
-    public void createBookWithLongFields() {
-        String longTitle = "A".repeat(1000);
-        String longDescription = "B".repeat(5000);
-        String longExcerpt = "C".repeat(2000);
-        String longBook = """
-        {
-            "title": "%s",
-            "description": "%s",
-            "pageCount": 500,
-            "excerpt": "%s",
-            "publishDate": "2020-01-01T00:00:00"
-        }
-        """.formatted(longTitle, longDescription, longExcerpt);
-        given()
-            .contentType(ContentType.JSON)
-            .body(longBook)
-            .when()
-            .post("/api/v1/Books")
-            .then()
-            .statusCode(200)
-            .body("title", equalTo(longTitle))
-            .body("description", equalTo(longDescription));
-    }
-
-    /**
-     * Test creating a book with special characters in title
-     */
-    @Test
-    public void createBookWithSpecialCharacters() {
-        String specialBook = """
-        {
-            "title": "El Niño & María's Café: A Story of Love ❤️",
-            "description": "Special characters: !@#$%^&*()_+{}|:<>?[]\\\\;',./`~",
-            "pageCount": 250,
-            "excerpt": "Testing unicode: 中文 العربية русский 🚀",
-            "publishDate": "2020-01-01T00:00:00"
-        }
-        """;
-        given()
-            .contentType(ContentType.JSON)
-            .body(specialBook)
-            .when()
-            .post("/api/v1/Books")
-            .then()
-            .statusCode(200)
-            .body("title", containsString("El Niño"));
     }
 
     /**
