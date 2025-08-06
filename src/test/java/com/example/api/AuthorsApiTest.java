@@ -167,7 +167,30 @@ public class AuthorsApiTest extends BaseTest {
             .body("firstName", nullValue())
             .body("lastName", nullValue());
     }
-
+    
+    /**
+     * Test creating an author with empty string values
+     */
+    @Test
+    public void createAuthorWithEmptyFields() {
+        String emptyAuthor = """
+        {   
+            "id": 0,
+            "idBook": 0,
+            "firstName": "",
+            "lastName":
+        }
+        """;
+        given()
+            .contentType(ContentType.JSON)
+            .body(emptyAuthor)
+            .when()
+            .post("/api/v1/Authors")
+            .then()
+            .statusCode(400)
+            .body("errors.'$.lastName'[0]", containsString("is an invalid start of a value"));
+    }
+    
     /**
      * Test creating an author with special characters
      */
@@ -241,7 +264,7 @@ public class AuthorsApiTest extends BaseTest {
             .when()
             .post("/api/v1/Authors")
             .then()
-            .statusCode(anyOf(is(400), is(500))); // Should fail due to malformed JSON
+            .statusCode(400); // Should fail due to malformed JSON
     }
 
     /**
