@@ -199,7 +199,8 @@ public class BooksApiTest extends BaseTest {
             .when()
             .post("/api/v1/Books")
             .then()
-            .statusCode(anyOf(is(200), is(400))); // Might accept or reject
+            .statusCode(400)
+            .body("errors.'$.publishDate'[0]", containsString("The JSON value could not be converted to System.DateTime."));
     }
 
     /**
@@ -271,8 +272,12 @@ public class BooksApiTest extends BaseTest {
     public void createBookWithInvalidJson() {
         String invalidJson = """
         {
-            "title": "Test Book",
-            "description": "Missing closing brace"
+             "id": 1,
+              "title": "string",
+              "description": "string",
+              "pageCount": 0,
+              "excerpt": "string",
+              "publishDate": "2025-08-06T07:55:04.532Z"
         """;
         given()
             .contentType(ContentType.JSON)
@@ -280,6 +285,7 @@ public class BooksApiTest extends BaseTest {
             .when()
             .post("/api/v1/Books")
             .then()
-            .statusCode(anyOf(is(400), is(500)));
+            .statusCode(400)
+            .body(containsString("There is an open JSON object or array that should be closed"));
     }
 }
